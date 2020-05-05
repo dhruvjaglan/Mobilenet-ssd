@@ -2,7 +2,7 @@
 
 
 
-##Citations:
+Citations:
 
 https://github.com/keras-team/keras-applications/blob/master/keras_applications/mobilenet.py
 

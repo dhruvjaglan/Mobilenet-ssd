@@ -11,7 +11,7 @@ class AnchorBox(Layer):
     self.scale_next = scale_next
     self.aspect_ratios =aspect_ratios
     self.n_boxes=n_boxes
-    self.variance = variance ##### to do what is variance for 
+    self.variance = variance 
     super(AnchorBox, self).__init__(**kwargs)
 
   def build(selimg_sizef, input_shape):
@@ -71,7 +71,7 @@ class AnchorBox(Layer):
     variances_tensor += self.variances
     boxes1 = np.concatenate((boxes_tensor, variances_tensor), axis=-1)
 
-    ########### variance part I need to study
+    ########### I need to study the use of variance
 
     boxes_tensor = np.expand_dims(boxes1, 0)
     boxes_tensor = K.tile(K.constant(boxes_tensor, dtype='float32'), (K.shape(x)[0], 1, 1, 1, 1))
