@@ -1,30 +1,28 @@
 import keras
 from mobilenet import mobilenet
+from keras.models import Model
 from keras.layers import Input, ReLU, ZeroPadding2D, DepthwiseConv2D, BatchNormalization, Conv2D, Reshape, Concatenate, Activation
 from anchorbox import AnchorBox
+import numpy as np
 
 
-
-
-
-def ssd300(input,n_classes):
+def ssd300(img_size,n_classes,min_scale=0.2,max_scale=0.9):
 
 	n_classes=n_classes+1
-	min_scale = 0.2
-	max_scale = 0.9
 	aspect_ratio_per_layer=[[1.0/3.0, 0.5, 1.0, 2.0, 3.0],
 	[1.0/3.0, 0.5, 1.0, 2.0, 3.0],[1.0/3.0, 0.5, 1.0, 2.0, 3.0],[0.5, 1.0, 2.0],[0.5, 1.0, 2.0]]
 	n_boxes= [6,6,6,4,4]
 	n_prediction_layers = 5
 	scales = np.linspace(min_scale, max_scale, n_prediction_layers+1)
-	img_size = (300,300,3)
 	# steps
-
 	############ regularizer can be added to reduce over fitting (kernel_regularizer)
 	###########  5 layers instead of 6
+
+	x = Input(shape=img_size)
+
 	
 
-	fc7,conv4_3=mobilenet(input)
+	fc7,conv4_3=mobilenet(x)
 
 	#### fc7 = (10,10,1024)   #### conv4_7 = (19,19,512)
 
@@ -45,10 +43,10 @@ def ssd300(input,n_classes):
 	#################### bounding box localization
 
 	loc_box1 = Conv2D(n_boxes[0]*4, (3,3), padding='same',use_bias=False)(conv4_3)
-	loc_box2 = Conv2D(n_boxes[0]*4, (3,3), padding='same',use_bias=False)(fc7)
-	loc_box3 = Conv2D(n_boxes[0]*4, (3,3), padding='same',use_bias=False)(block6)
-	loc_box4 = Conv2D(n_boxes[0]*4, (3,3), padding='same',use_bias=False)(block7)
-	loc_box5 = Conv2D(n_boxes[0]*4, (3,3), padding='same',use_bias=False)(block8)
+	loc_box2 = Conv2D(n_boxes[1]*4, (3,3), padding='same',use_bias=False)(fc7)
+	loc_box3 = Conv2D(n_boxes[2]*4, (3,3), padding='same',use_bias=False)(block6)
+	loc_box4 = Conv2D(n_boxes[3]*4, (3,3), padding='same',use_bias=False)(block7)
+	loc_box5 = Conv2D(n_boxes[4]*4, (3,3), padding='same',use_bias=False)(block8)
 
 	############ prior box
 
@@ -93,9 +91,13 @@ def ssd300(input,n_classes):
 
 	predictions = Concatenate(axis=2)([mbox_conf_softmax,mbox_loc,mbox_prior])
 
-	model = Model(inputs=input, outputs=predictions)
+	model = Model(inputs=x, outputs=predictions)
 
-	return model
+	predictor_sizes = np.array([conf_class1._keras_shape[1:3],
+		conf_class2._keras_shape[1:3],conf_class3._keras_shape[1:3],
+		conf_class4._keras_shape[1:3],conf_class5._keras_shape[1:3]])
+
+	return model, predictor_sizes
 
 
 
@@ -109,4 +111,3 @@ def downsample_block(conv_filter1, conv_filter2, previous_block, strides=(2,2),p
 	x = ReLU(6.)(x)
 
 	return x
-

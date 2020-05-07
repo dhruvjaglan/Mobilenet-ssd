@@ -1,5 +1,6 @@
+import keras
 from keras import backend as K
-from keras.layers import Layer
+from keras.layers import Layer, InputSpec
 import numpy as np
 
 class AnchorBox(Layer):
@@ -14,8 +15,8 @@ class AnchorBox(Layer):
     self.variance = variance 
     super(AnchorBox, self).__init__(**kwargs)
 
-  def build(selimg_sizef, input_shape):
-    # Create a trainable weight variable for this layer.
+  def build(self, input_shape):
+    self.input_spec = [InputSpec(shape=input_shape)]
     super(AnchorBox, self).build(input_shape)  # Be sure to call this at the end
 
   def call(self, x):
@@ -32,7 +33,7 @@ class AnchorBox(Layer):
         h = size * np.sqrt(self.scale*self.scale_next/ar)
         box_width.append(w)
         box_height.append(h)
-    if K.image_dim_ordering() == 'tf':
+    if K.common.image_dim_ordering() == 'tf':
       batch_size, layer_height, layer_width, layer_channel= x._keras_shape
     else:
       batch_size, layer_channel, layer_height, layer_width= x._keras_shape
@@ -48,7 +49,7 @@ class AnchorBox(Layer):
     centers_x = centers_x.reshape(-1, 1)
     centers_y = centers_y.reshape(-1, 1)
     boxes = np.concatenate((centers_x,centers_y),axis=1)
-    boxes = np.tile(boxes,(1,2*n_boxes))
+    boxes = np.tile(boxes,(1,2*self.n_boxes))
     boxes[:,::4] += box_width
     boxes[:,1::4] += box_height
     boxes[:,2::4] -= box_width
@@ -65,11 +66,11 @@ class AnchorBox(Layer):
     boxes1[:,2]= (boxes[:,0]-boxes[:,2])/2  ### w
     boxes1[:,3]= (boxes[:,1]-boxes[:,3])/2  #### h
 
-    boxes1= np.reshape(boxes1, (layer_height,layer_width,n_boxes,4))
+    boxes1= np.reshape(boxes1, (layer_height,layer_width,self.n_boxes,4))
     variances_tensor = np.zeros_like(boxes1)
 
-    variances_tensor += self.variances
-    boxes1 = np.concatenate((boxes_tensor, variances_tensor), axis=-1)
+    variances_tensor += self.variance
+    boxes1 = np.concatenate((boxes1, variances_tensor), axis=-1)
 
     ########### I need to study the use of variance
 
@@ -81,7 +82,7 @@ class AnchorBox(Layer):
 
   def compute_output_shape(self, input_shape):
 
-    if K.image_dim_ordering() == 'tf':
+    if K.common.image_dim_ordering() == 'tf':
       batch_size, layer_height, layer_width, layer_channel= input_shape
     else:
       batch_size, layer_channel, layer_height, layer_width= input_shape
